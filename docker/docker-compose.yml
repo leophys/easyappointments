@@ -1,15 +1,16 @@
-version: "3.1"
+version: "3"
+
 services:
-    mysql:
-        image: mysql:5.7
+    postgres:
+        image: postgres:14
         container_name: easyappointments-database
         volumes:
-            - ./mysql:/var/lib/mysql
+            - pgdata:/var/lib/postgresql/data
         environment:
-            - MYSQL_ROOT_PASSWORD=root
-            - MYSQL_DATABASE=easyappointments
+            - POSTGRES_USER=easyappointments
+            - POSTGRES_PASSWORD=root
         ports:
-            - "8001:3306"
+            - "5432:5432"
     server:
         build: ./server
         image: easyappointments-server:v1
@@ -19,3 +20,6 @@ services:
         volumes:
             - ../:/var/www/html
             - ./server/php.ini:/usr/local/etc/php/conf.d/99-overrides.ini
+
+volumes:
+    pgdata: {}
