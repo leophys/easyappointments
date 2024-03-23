@@ -161,14 +161,18 @@ class Providers_model extends EA_Model {
 
         // When inserting a record the email address must be unique.
         $provider_id = (isset($provider['id'])) ? $provider['id'] : '';
-
-        $num_rows = $this->db
+        $query = $this->db
             ->select('*')
             ->from('users')
             ->join('roles', 'roles.id = users.id_roles', 'inner')
             ->where('roles.slug', DB_SLUG_PROVIDER)
-            ->where('users.email', $provider['email'])
-            ->where('users.id !=', $provider_id)
+            ->where('users.email', $provider['email']);
+
+        if ($provider_id != '') {
+            $query = $query->where('users.id !=', $provider_id);
+        }
+
+        $num_rows = $query
             ->get()
             ->num_rows();
 

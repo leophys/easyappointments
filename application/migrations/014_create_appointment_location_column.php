@@ -24,13 +24,13 @@ class Migration_Create_appointment_location_column extends CI_Migration {
     public function up()
     {
         $this->db->query('
-            ALTER TABLE `' . $this->db->dbprefix('appointments') . '`
-                ADD COLUMN `location` TEXT AFTER `end_datetime`; 
+            ALTER TABLE ' . $this->db->dbprefix('appointments') . '
+                ADD COLUMN location TEXT;
         ');
 
         $this->db->query('
-            ALTER TABLE `' . $this->db->dbprefix('services') . '`
-                ADD COLUMN `location` TEXT AFTER `description`; 
+            ALTER TABLE ' . $this->db->dbprefix('services') . '
+                ADD COLUMN location TEXT;
         ');
     }
 
@@ -40,13 +40,13 @@ class Migration_Create_appointment_location_column extends CI_Migration {
     public function down()
     {
         $this->db->query('
-            ALTER TABLE `' . $this->db->dbprefix('appointments') . '`
-                DROP COLUMN `location`; 
+            ALTER TABLE ' . $this->db->dbprefix('appointments') . '
+                DROP COLUMN location;
         ');
 
         $this->db->query('
-            ALTER TABLE `' . $this->db->dbprefix('services') . '`
-                DROP COLUMN `location`; 
+            ALTER TABLE ' . $this->db->dbprefix('services') . '
+                DROP COLUMN location;
         ');
     }
 }

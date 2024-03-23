@@ -19,217 +19,216 @@
  */
 class Migration_Change_column_types extends CI_Migration {
     /**
+     * Change a column to SERIAL in postgres
+     */
+    private function change_to_serial($tablename, $column) {
+        $table = $this->db->dbprefix($tablename);
+        $seqname = $table . '_' . $column . '_seq';
+        $this->db->trans_start();
+        $maxvalue = $this->db->select_max($column, 'max')->get($table)->row()->max + 1;
+        $this->db->query('CREATE SEQUENCE IF NOT EXISTS ' . $seqname . ' MINVALUE ' . $maxvalue);
+        $this->db->query('ALTER TABLE ' . $table . ' ALTER ' . $column . ' SET DEFAULT nextval(\'' . $seqname . '\')');
+        $this->db->query('ALTER SEQUENCE '. $seqname . ' OWNED BY ' . $table . '.' . $column);
+        $this->db->trans_complete();
+    }
+
+    /**
+     * Modify a column name and/or type
+     */
+    private function modify_column($tablename, $oldcolname, $newcolname, $newtype) {
+        $table = $this->db->dbprefix($tablename);
+        $this->db->trans_start();
+        if ($oldcolname != $newcolname) {
+            $this->db->query('ALTER TABLE ' . $table . ' RENAME COLUMN ' . $oldcolname . ' TO ' . $newcolname);
+        }
+        $this->db->query('ALTER TABLE ' . $table . ' ALTER COLUMN ' . $newcolname . ' TYPE ' . $newtype);
+        $this->db->trans_complete();
+    }
+
+    /**
+     * Modify a set of columns
+     */
+    private function modify_columns($tablename, $fields) {
+        foreach ($fields as $oldcolumn => $dest) {
+            $this->modify_column($tablename, $oldcolumn, $dest['name'], $dest['type']);
+        }
+    }
+
+    /**
      * Upgrade method.
      */
     public function up()
     {
         // Drop table constraints.
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('appointments') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('appointments') . '_ibfk_2`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('appointments') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('appointments') . '_ibfk_3`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('appointments') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('appointments') . '_ibfk_4`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('secretaries_providers') . '` DROP FOREIGN KEY `fk_' . $this->db->dbprefix('secretaries_providers') . '_1`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('secretaries_providers') . '` DROP FOREIGN KEY `fk_' . $this->db->dbprefix('secretaries_providers') . '_2`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('services_providers') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('services_providers') . '_ibfk_1`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('services_providers') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('services_providers') . '_ibfk_2`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('services') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('services') . '_ibfk_1`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('users') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('users') . '_ibfk_1`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('user_settings') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('user_settings') . '_ibfk_1`');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('appointments') . ' DROP CONSTRAINT ' . $this->db->dbprefix('appointments') . '_ibfk_2');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('appointments') . ' DROP CONSTRAINT ' . $this->db->dbprefix('appointments') . '_ibfk_3');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('appointments') . ' DROP CONSTRAINT ' . $this->db->dbprefix('appointments') . '_ibfk_4');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('secretaries_providers') . ' DROP CONSTRAINT fk_' . $this->db->dbprefix('secretaries_providers') . '_1');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('secretaries_providers') . ' DROP CONSTRAINT fk_' . $this->db->dbprefix('secretaries_providers') . '_2');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('services_providers') . ' DROP CONSTRAINT ' . $this->db->dbprefix('services_providers') . '_ibfk_1');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('services_providers') . ' DROP CONSTRAINT ' . $this->db->dbprefix('services_providers') . '_ibfk_2');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('services') . ' DROP CONSTRAINT ' . $this->db->dbprefix('services') . '_ibfk_1');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('users') . ' DROP CONSTRAINT ' . $this->db->dbprefix('users') . '_ibfk_1');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('user_settings') . ' DROP CONSTRAINT ' . $this->db->dbprefix('user_settings') . '_ibfk_1');
 
         // Appointments
+        $this->change_to_serial('appointments', 'id');
+
         $fields = [
-            'id' => [
-                'name' => 'id',
-                'type' => 'int',
-                'constraint' => '11',
-                'auto_increment' => TRUE
-            ],
             'id_users_provider' => [
                 'name' => 'id_users_provider',
-                'type' => 'int',
-                'constraint' => '11'
+                'type' => 'integer',
             ],
             'id_users_customer' => [
                 'name' => 'id_users_customer',
-                'type' => 'int',
-                'constraint' => '11'
+                'type' => 'integer',
             ],
             'id_services' => [
                 'name' => 'id_services',
-                'type' => 'int',
-                'constraint' => '11'
+                'type' => 'integer',
             ]
         ];
 
-        $this->dbforge->modify_column('appointments', $fields);
+        $this->modify_columns('appointments', $fields);
 
         // Roles
+        $this->change_to_serial('roles', 'id');
+
         $fields = [
-            'id' => [
-                'name' => 'id',
-                'type' => 'int',
-                'constraint' => '11',
-                'auto_increment' => TRUE
-            ],
             'appointments' => [
                 'name' => 'appointments',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ],
             'customers' => [
                 'name' => 'customers',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ],
             'services' => [
                 'name' => 'services',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ],
             'users' => [
                 'name' => 'users',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ],
             'system_settings' => [
                 'name' => 'system_settings',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ],
             'user_settings' => [
                 'name' => 'user_settings',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ]
         ];
 
-        $this->dbforge->modify_column('roles', $fields);
+        $this->modify_columns('roles', $fields);
 
         // Secretary Provider
         $fields = [
             'id_users_secretary' => [
                 'name' => 'id_users_secretary',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ],
             'id_users_provider' => [
                 'name' => 'id_users_provider',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ]
         ];
 
-        $this->dbforge->modify_column('secretaries_providers', $fields);
+        $this->modify_columns('secretaries_providers', $fields);
 
         // Services
+        $this->change_to_serial('services', 'id');
+
         $fields = [
-            'id' => [
-                'name' => 'id',
-                'type' => 'int',
-                'constraint' => '11',
-                'auto_increment' => TRUE
-            ],
             'id_service_categories' => [
                 'name' => 'id_service_categories',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ]
         ];
 
-        $this->dbforge->modify_column('services', $fields);
+        $this->modify_columns('services', $fields);
 
         // Service Providers
         $fields = [
             'id_users' => [
                 'name' => 'id_users',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ],
             'id_services' => [
                 'name' => 'id_services',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ]
         ];
 
-        $this->dbforge->modify_column('services_providers', $fields);
+        $this->modify_columns('services_providers', $fields);
 
         // Service Categories
-        $fields = [
-            'id' => [
-                'name' => 'id',
-                'type' => 'int',
-                'constraint' => '11',
-                'auto_increment' => TRUE
-            ]
-        ];
-
-        $this->dbforge->modify_column('service_categories', $fields);
+        $this->change_to_serial('service_categories', 'id');
 
         // Settings
-        $fields = [
-            'id' => [
-                'name' => 'id',
-                'type' => 'int',
-                'constraint' => '11',
-                'auto_increment' => TRUE
-            ]
-        ];
-
-        $this->dbforge->modify_column('settings', $fields);
+        $this->change_to_serial('settings', 'id');
 
         // Users
+        $this->change_to_serial('users', 'id');
+
         $fields = [
-            'id' => [
-                'name' => 'id',
-                'type' => 'int',
-                'constraint' => '11',
-                'auto_increment' => TRUE
-            ],
             'id_roles' => [
                 'name' => 'id_roles',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ]
         ];
 
-        $this->dbforge->modify_column('users', $fields);
+        $this->modify_columns('users', $fields);
 
         // Users Settings
         $fields = [
             'id_users' => [
                 'name' => 'id_users',
-                'type' => 'int',
+                'type' => 'integer',
                 'constraint' => '11'
             ]
         ];
 
-        $this->dbforge->modify_column('user_settings', $fields);
+        $this->modify_columns('user_settings', $fields);
 
         // Add table constraints again.
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('appointments') . '`
-            ADD CONSTRAINT `' . $this->db->dbprefix('appointments') . '_ibfk_2` FOREIGN KEY (`id_users_customer`) REFERENCES `' . $this->db->dbprefix('users') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-            ADD CONSTRAINT `' . $this->db->dbprefix('appointments') . '_ibfk_3` FOREIGN KEY (`id_services`) REFERENCES `' . $this->db->dbprefix('services') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-            ADD CONSTRAINT `' . $this->db->dbprefix('appointments') . '_ibfk_4` FOREIGN KEY (`id_users_provider`) REFERENCES `' . $this->db->dbprefix('users') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('appointments') . '
+            ADD CONSTRAINT ' . $this->db->dbprefix('appointments') . '_ibfk_2 FOREIGN KEY (id_users_customer) REFERENCES ' . $this->db->dbprefix('users') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            ADD CONSTRAINT ' . $this->db->dbprefix('appointments') . '_ibfk_3 FOREIGN KEY (id_services) REFERENCES ' . $this->db->dbprefix('services') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            ADD CONSTRAINT ' . $this->db->dbprefix('appointments') . '_ibfk_4 FOREIGN KEY (id_users_provider) REFERENCES ' . $this->db->dbprefix('users') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE');
 
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('secretaries_providers') . '`
-            ADD CONSTRAINT `fk_' . $this->db->dbprefix('secretaries_providers') . '_1` FOREIGN KEY (`id_users_secretary`) REFERENCES `' . $this->db->dbprefix('users') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-            ADD CONSTRAINT `fk_' . $this->db->dbprefix('secretaries_providers') . '_2` FOREIGN KEY (`id_users_provider`) REFERENCES `' . $this->db->dbprefix('users') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('secretaries_providers') . '
+            ADD CONSTRAINT fk_' . $this->db->dbprefix('secretaries_providers') . '_1 FOREIGN KEY (id_users_secretary) REFERENCES ' . $this->db->dbprefix('users') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            ADD CONSTRAINT fk_' . $this->db->dbprefix('secretaries_providers') . '_2 FOREIGN KEY (id_users_provider) REFERENCES ' . $this->db->dbprefix('users') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE');
 
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('services') . '`
-            ADD CONSTRAINT `' . $this->db->dbprefix('services') . '_ibfk_1` FOREIGN KEY (`id_service_categories`) REFERENCES `' . $this->db->dbprefix('service_categories') . '` (`id`) ON DELETE SET NULL ON UPDATE CASCADE');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('services') . '
+            ADD CONSTRAINT ' . $this->db->dbprefix('services') . '_ibfk_1 FOREIGN KEY (id_service_categories) REFERENCES ' . $this->db->dbprefix('service_categories') . ' (id) ON DELETE SET NULL ON UPDATE CASCADE');
 
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('services_providers') . '`
-            ADD CONSTRAINT `' . $this->db->dbprefix('services_providers') . '_ibfk_1` FOREIGN KEY (`id_users`) REFERENCES `' . $this->db->dbprefix('users') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-            ADD CONSTRAINT `' . $this->db->dbprefix('services_providers') . '_ibfk_2` FOREIGN KEY (`id_services`) REFERENCES `' . $this->db->dbprefix('services') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('services_providers') . '
+            ADD CONSTRAINT ' . $this->db->dbprefix('services_providers') . '_ibfk_1 FOREIGN KEY (id_users) REFERENCES ' . $this->db->dbprefix('users') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            ADD CONSTRAINT ' . $this->db->dbprefix('services_providers') . '_ibfk_2 FOREIGN KEY (id_services) REFERENCES ' . $this->db->dbprefix('services') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE');
 
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('users') . '`
-            ADD CONSTRAINT `' . $this->db->dbprefix('users') . '_ibfk_1` FOREIGN KEY (`id_roles`) REFERENCES `' . $this->db->dbprefix('roles') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('users') . '
+            ADD CONSTRAINT ' . $this->db->dbprefix('users') . '_ibfk_1 FOREIGN KEY (id_roles) REFERENCES ' . $this->db->dbprefix('roles') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE');
 
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('user_settings') . '`
-            ADD CONSTRAINT `' . $this->db->dbprefix('user_settings') . '_ibfk_1` FOREIGN KEY (`id_users`) REFERENCES `' . $this->db->dbprefix('users') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('user_settings') . '
+            ADD CONSTRAINT ' . $this->db->dbprefix('user_settings') . '_ibfk_1 FOREIGN KEY (id_users) REFERENCES ' . $this->db->dbprefix('users') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE');
 
         // Change charset of ' . $this->db->dbprefix('secretaries_providers') . ' table for databases created with EA! 1.2.1 version
-        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('secretaries_providers') . ' CONVERT TO CHARACTER SET utf8');
+        //$this->db->query('ALTER TABLE ' . $this->db->dbprefix('secretaries_providers') . ' CONVERT TO CHARACTER SET utf8');
     }
 
     /**
@@ -238,16 +237,16 @@ class Migration_Change_column_types extends CI_Migration {
     public function down()
     {
         // Drop table constraints.
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('appointments') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('appointments') . '_ibfk_2`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('appointments') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('appointments') . '_ibfk_3`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('appointments') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('appointments') . '_ibfk_4`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('secretaries_providers') . '` DROP FOREIGN KEY `fk_' . $this->db->dbprefix('secretaries_providers') . '_1`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('secretaries_providers') . '` DROP FOREIGN KEY `fk_' . $this->db->dbprefix('secretaries_providers') . '_2`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('services_providers') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('services_providers') . '_ibfk_1`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('services_providers') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('services_providers') . '_ibfk_2`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('services') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('services') . '_ibfk_1`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('users') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('users') . '_ibfk_1`');
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('user_settings') . '` DROP FOREIGN KEY `' . $this->db->dbprefix('user_settings') . '_ibfk_1`');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('appointments') . ' DROP CONSTRAINT ' . $this->db->dbprefix('appointments') . '_ibfk_2');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('appointments') . ' DROP CONSTRAINT ' . $this->db->dbprefix('appointments') . '_ibfk_3');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('appointments') . ' DROP CONSTRAINT ' . $this->db->dbprefix('appointments') . '_ibfk_4');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('secretaries_providers') . ' DROP CONSTRAINT fk_' . $this->db->dbprefix('secretaries_providers') . '_1');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('secretaries_providers') . ' DROP CONSTRAINT fk_' . $this->db->dbprefix('secretaries_providers') . '_2');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('services_providers') . ' DROP CONSTRAINT ' . $this->db->dbprefix('services_providers') . '_ibfk_1');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('services_providers') . ' DROP CONSTRAINT ' . $this->db->dbprefix('services_providers') . '_ibfk_2');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('services') . ' DROP CONSTRAINT ' . $this->db->dbprefix('services') . '_ibfk_1');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('users') . ' DROP CONSTRAINT ' . $this->db->dbprefix('users') . '_ibfk_1');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('user_settings') . ' DROP CONSTRAINT ' . $this->db->dbprefix('user_settings') . '_ibfk_1');
 
         // Appointments
         $fields = [
@@ -274,7 +273,7 @@ class Migration_Change_column_types extends CI_Migration {
             ]
         ];
 
-        $this->dbforge->modify_column('appointments', $fields);
+        $this->modify_columns('appointments', $fields);
 
         // Roles
         $fields = [
@@ -316,7 +315,7 @@ class Migration_Change_column_types extends CI_Migration {
             ]
         ];
 
-        $this->dbforge->modify_column('roles', $fields);
+        $this->modify_columns('roles', $fields);
 
         // Secretary Provider
         $fields = [
@@ -332,7 +331,7 @@ class Migration_Change_column_types extends CI_Migration {
             ]
         ];
 
-        $this->dbforge->modify_column('secretaries_providers', $fields);
+        $this->modify_columns('secretaries_providers', $fields);
 
         // Services
         $fields = [
@@ -349,7 +348,7 @@ class Migration_Change_column_types extends CI_Migration {
             ]
         ];
 
-        $this->dbforge->modify_column('services', $fields);
+        $this->modify_columns('services', $fields);
 
         // Service Providers
         $fields = [
@@ -365,7 +364,7 @@ class Migration_Change_column_types extends CI_Migration {
             ]
         ];
 
-        $this->dbforge->modify_column('services_providers', $fields);
+        $this->modify_columns('services_providers', $fields);
 
         // Service Categories
         $fields = [
@@ -377,7 +376,7 @@ class Migration_Change_column_types extends CI_Migration {
             ]
         ];
 
-        $this->dbforge->modify_column('service_categories', $fields);
+        $this->modify_columns('service_categories', $fields);
 
         // Settings
         $fields = [
@@ -389,7 +388,7 @@ class Migration_Change_column_types extends CI_Migration {
             ]
         ];
 
-        $this->dbforge->modify_column('settings', $fields);
+        $this->modify_columns('settings', $fields);
 
         // Users
         $fields = [
@@ -406,7 +405,7 @@ class Migration_Change_column_types extends CI_Migration {
             ]
         ];
 
-        $this->dbforge->modify_column('users', $fields);
+        $this->modify_columns('users', $fields);
 
         // Users Settings
         $fields = [
@@ -417,29 +416,29 @@ class Migration_Change_column_types extends CI_Migration {
             ]
         ];
 
-        $this->dbforge->modify_column('user_settings', $fields);
+        $this->modify_columns('user_settings', $fields);
 
         // Add database constraints.
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('appointments') . '`
-            ADD CONSTRAINT `' . $this->db->dbprefix('appointments') . '_ibfk_2` FOREIGN KEY (`id_users_customer`) REFERENCES `' . $this->db->dbprefix('users') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-            ADD CONSTRAINT `' . $this->db->dbprefix('appointments') . '_ibfk_3` FOREIGN KEY (`id_services`) REFERENCES `' . $this->db->dbprefix('services') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-            ADD CONSTRAINT `' . $this->db->dbprefix('appointments') . '_ibfk_4` FOREIGN KEY (`id_users_provider`) REFERENCES `' . $this->db->dbprefix('users') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('appointments') . '
+            ADD CONSTRAINT ' . $this->db->dbprefix('appointments') . '_ibfk_2 FOREIGN KEY (id_users_customer) REFERENCES ' . $this->db->dbprefix('users') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            ADD CONSTRAINT ' . $this->db->dbprefix('appointments') . '_ibfk_3 FOREIGN KEY (id_services) REFERENCES ' . $this->db->dbprefix('services') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            ADD CONSTRAINT ' . $this->db->dbprefix('appointments') . '_ibfk_4 FOREIGN KEY (id_users_provider) REFERENCES ' . $this->db->dbprefix('users') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE');
 
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('secretaries_providers') . '`
-            ADD CONSTRAINT `fk_' . $this->db->dbprefix('secretaries_providers') . '_1` FOREIGN KEY (`id_users_secretary`) REFERENCES `' . $this->db->dbprefix('users') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-            ADD CONSTRAINT `fk_' . $this->db->dbprefix('secretaries_providers') . '_2` FOREIGN KEY (`id_users_provider`) REFERENCES `' . $this->db->dbprefix('users') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('secretaries_providers') . '
+            ADD CONSTRAINT fk_' . $this->db->dbprefix('secretaries_providers') . '_1 FOREIGN KEY (id_users_secretary) REFERENCES ' . $this->db->dbprefix('users') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            ADD CONSTRAINT fk_' . $this->db->dbprefix('secretaries_providers') . '_2 FOREIGN KEY (id_users_provider) REFERENCES ' . $this->db->dbprefix('users') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE');
 
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('services') . '`
-            ADD CONSTRAINT `' . $this->db->dbprefix('services') . '_ibfk_1` FOREIGN KEY (`id_service_categories`) REFERENCES `' . $this->db->dbprefix('service_categories') . '` (`id`) ON DELETE SET NULL ON UPDATE CASCADE');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('services') . '
+            ADD CONSTRAINT ' . $this->db->dbprefix('services') . '_ibfk_1 FOREIGN KEY (id_service_categories) REFERENCES ' . $this->db->dbprefix('service_categories') . ' (id) ON DELETE SET NULL ON UPDATE CASCADE');
 
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('services_providers') . '`
-            ADD CONSTRAINT `' . $this->db->dbprefix('services_providers') . '_ibfk_1` FOREIGN KEY (`id_users`) REFERENCES `' . $this->db->dbprefix('users') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-            ADD CONSTRAINT `' . $this->db->dbprefix('services_providers') . '_ibfk_2` FOREIGN KEY (`id_services`) REFERENCES `' . $this->db->dbprefix('services') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('services_providers') . '
+            ADD CONSTRAINT ' . $this->db->dbprefix('services_providers') . '_ibfk_1 FOREIGN KEY (id_users) REFERENCES ' . $this->db->dbprefix('users') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            ADD CONSTRAINT ' . $this->db->dbprefix('services_providers') . '_ibfk_2 FOREIGN KEY (id_services) REFERENCES ' . $this->db->dbprefix('services') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE');
 
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('users') . '`
-            ADD CONSTRAINT `' . $this->db->dbprefix('users') . '_ibfk_1` FOREIGN KEY (`id_roles`) REFERENCES `' . $this->db->dbprefix('roles') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('users') . '
+            ADD CONSTRAINT ' . $this->db->dbprefix('users') . '_ibfk_1 FOREIGN KEY (id_roles) REFERENCES ' . $this->db->dbprefix('roles') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE');
 
-        $this->db->query('ALTER TABLE `' . $this->db->dbprefix('user_settings') . '`
-            ADD CONSTRAINT `' . $this->db->dbprefix('user_settings') . '_ibfk_1` FOREIGN KEY (`id_users`) REFERENCES `' . $this->db->dbprefix('users') . '` (`id`) ON DELETE CASCADE ON UPDATE CASCADE');
+        $this->db->query('ALTER TABLE ' . $this->db->dbprefix('user_settings') . '
+            ADD CONSTRAINT ' . $this->db->dbprefix('user_settings') . '_ibfk_1 FOREIGN KEY (id_users) REFERENCES ' . $this->db->dbprefix('users') . ' (id) ON DELETE CASCADE ON UPDATE CASCADE');
     }
 }

@@ -107,14 +107,18 @@ class Customers_model extends EA_Model {
 
         // When inserting a record the email address must be unique.
         $customer_id = isset($customer['id']) ? $customer['id'] : '';
-
-        $num_rows = $this->db
+        $query = $this->db
             ->select('*')
             ->from('users')
             ->join('roles', 'roles.id = users.id_roles', 'inner')
             ->where('roles.slug', DB_SLUG_CUSTOMER)
-            ->where('users.email', $customer['email'])
-            ->where('users.id !=', $customer_id)
+            ->where('users.email', $customer['email']);
+
+        if ($customer_id != '') {
+            $query = $query->where('users.id !=', $customer_id);
+        }
+
+        $num_rows = $query
             ->get()
             ->num_rows();
 

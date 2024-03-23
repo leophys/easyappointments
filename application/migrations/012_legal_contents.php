@@ -96,7 +96,7 @@ class Migration_Legal_contents extends CI_Migration {
 
         $this->dbforge->add_key('id', TRUE);
 
-        $this->dbforge->create_table('consents', TRUE, ['engine' => 'InnoDB']);
+        $this->dbforge->create_table('consents', TRUE);
     }
 
     /**

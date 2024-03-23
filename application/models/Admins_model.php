@@ -131,14 +131,18 @@ class Admins_model extends EA_Model {
 
         // When inserting a record the email address must be unique.
         $admin_id = isset($admin['id']) ? $admin['id'] : '';
-
-        $num_rows = $this->db
+        $query = $this->db
             ->select('*')
             ->from('users')
             ->join('roles', 'roles.id = users.id_roles', 'inner')
             ->where('roles.slug', DB_SLUG_ADMIN)
-            ->where('users.email', $admin['email'])
-            ->where('users.id !=', $admin_id)
+            ->where('users.email', $admin['email']);
+
+        if ($admin_id != '') {
+            $query = $query->where('users.id !=', $admin_id);
+        }
+
+        $num_rows = $query
             ->get()
             ->num_rows();
 
